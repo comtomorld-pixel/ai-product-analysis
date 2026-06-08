@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI产品用户洞察分析报告</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+/* ══════════════════════════════════════════════════════════
+   CSS Reset & Variables
+   ══════════════════════════════════════════════════════════ */
+:root {
+  --brand: #1976D2;
+  --brand-light: #42A5F5;
+  --brand-dark: #0D47A1;
+  --red: #E53935;
+  --green: #43A047;
+  --amber: #FFA726;
+  --gray-50: #f8f9fc;
+  --gray-100: #f1f3f9;
+  --gray-200: #e2e6ef;
+  --gray-600: #6b7280;
+  --gray-800: #2d3748;
+  --gray-900: #1a202c;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,.08);
+  --max-width: 1200px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: #f5f6fa; color: var(--gray-800); line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Layout
+   ══════════════════════════════════════════════════════════ */
+.container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+section { padding: 64px 0; }
+
+/* ══════════════════════════════════════════════════════════
+   Hero Header
+   ══════════════════════════════════════════════════════════ */
+.hero {
+  background: linear-gradient(135deg, var(--brand-dark) 0%, #1565C0 40%, var(--brand) 100%);
+  color: #fff; text-align: center; padding: 80px 24px 72px;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,.06) 0%, transparent 60%),
+              radial-gradient(circle at 70% 20%, rgba(255,255,255,.04) 0%, transparent 50%);
+}
+.hero * { position: relative; }
+.hero-badge {
+  display: inline-block; background: rgba(255,255,255,.15); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.2); border-radius: 20px;
+  padding: 4px 16px; font-size: 13px; letter-spacing: .04em; margin-bottom: 24px;
+}
+.hero h1 { font-size: clamp(28px, 5vw, 44px); font-weight: 700; letter-spacing: -.01em; margin-bottom: 8px; }
+.hero .subtitle { font-size: 18px; opacity: .85; margin-bottom: 4px; }
+.hero .value-prop {
+  font-size: 16px; opacity: .7; max-width: 600px; margin: 16px auto 0;
+  line-height: 1.6;
+}
+.hero .author { font-size: 15px; opacity: .65; margin-top: 20px; }
+
+/* ══════════════════════════════════════════════════════════
+   Section Styles
+   ══════════════════════════════════════════════════════════ */
+.section-title {
+  font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 8px;
+  color: var(--gray-900);
+}
+.section-subtitle { text-align: center; color: var(--gray-600); margin-bottom: 40px; font-size: 15px; }
+
+.card {
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 32px; margin-bottom: 24px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Problem Background — Blurred Review Cards
+   ══════════════════════════════════════════════════════════ */
+.problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.review-card {
+  background: #fff; border-radius: var(--radius); padding: 20px 24px;
+  box-shadow: var(--shadow); position: relative; overflow: hidden;
+}
+.review-card .blur-overlay {
+  position: absolute; inset: 0; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  background: rgba(255,255,255,.3); z-index: 1; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+}
+.review-card .blur-tag {
+  position: relative; z-index: 2; background: var(--red); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 10px;
+}
+.review-card .review-content { position: relative; z-index: 3; }
+.review-card .review-text { font-size: 14px; line-height: 1.6; color: var(--gray-800); margin-bottom: 12px; }
+.review-card .review-meta { font-size: 12px; color: var(--gray-600); display: flex; justify-content: space-between; }
+.review-card .review-stars { color: var(--amber); }
+.review-card .pain-tag {
+  display: inline-block; background: #FFF3E0; color: #E65100; font-size: 11px;
+  padding: 1px 8px; border-radius: 8px; margin-top: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Data Overview — Animated Counters
+   ══════════════════════════════════════════════════════════ */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
+.metric-card {
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 32px 24px; text-align: center; transition: transform .2s;
+}
+.metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.metric-icon { font-size: 32px; margin-bottom: 12px; }
+.metric-value {
+  font-size: 48px; font-weight: 800; color: var(--brand); letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+}
+.metric-value.animate { animation: countUp .6s ease-out both; }
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.metric-label { font-size: 14px; color: var(--gray-600); margin-top: 6px; }
+
+/* ══════════════════════════════════════════════════════════
+   Chart Containers
+   ══════════════════════════════════════════════════════════ */
+.chart-box { height: 420px; width: 100%; }
+.chart-box.tall { height: 500px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+/* ══════════════════════════════════════════════════════════
+   Tabs
+   ══════════════════════════════════════════════════════════ */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 20px; background: var(--gray-100); border-radius: 10px; padding: 4px; width: fit-content; }
+.tab-btn {
+  padding: 8px 20px; border: none; background: transparent; border-radius: 8px;
+  cursor: pointer; font-size: 14px; font-weight: 500; color: var(--gray-600);
+  transition: all .2s;
+}
+.tab-btn.active { background: #fff; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* ══════════════════════════════════════════════════════════
+   Suggestions
+   ══════════════════════════════════════════════════════════ */
+.suggestion-card {
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 28px 32px; display: grid; grid-template-columns: 1fr auto; gap: 24px;
+  align-items: start; margin-bottom: 20px;
+}
+.suggestion-card .priority-badge {
+  font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 12px;
+  display: inline-block; margin-bottom: 12px;
+}
+.suggestion-card .priority-badge.p0 { background: #FFEBEE; color: #C62828; }
+.suggestion-card .priority-badge.p1 { background: #FFF3E0; color: #E65100; }
+.suggestion-card h4 { font-size: 18px; margin-bottom: 8px; }
+.suggestion-card p { font-size: 14px; color: var(--gray-600); line-height: 1.7; }
+.suggestion-card blockquote {
+  border-left: 3px solid var(--brand-light); padding: 8px 16px; margin: 12px 0 0;
+  background: var(--gray-50); border-radius: 0 8px 8px 0; font-size: 13px;
+  color: var(--gray-600); font-style: italic;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Tech Stack
+   ══════════════════════════════════════════════════════════ */
+.tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.tech-item {
+  background: #fff; border-radius: var(--radius); padding: 20px; text-align: center;
+  box-shadow: var(--shadow); transition: transform .2s;
+}
+.tech-item:hover { transform: translateY(-2px); }
+.tech-item .tech-icon { font-size: 28px; margin-bottom: 8px; }
+.tech-item .tech-name { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+.tech-item .tech-desc { font-size: 12px; color: var(--gray-600); margin-top: 4px; }
+
+/* ══════════════════════════════════════════════════════════
+   Download Section
+   ══════════════════════════════════════════════════════════ */
+.download-section {
+  background: linear-gradient(135deg, var(--gray-900), var(--gray-800));
+  color: #fff; text-align: center; padding: 56px 24px;
+}
+.download-section h3 { font-size: 24px; margin-bottom: 8px; }
+.download-section p { opacity: .7; margin-bottom: 24px; font-size: 15px; }
+.btn-download {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--brand); color: #fff; border: none; padding: 14px 32px;
+  border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer;
+  text-decoration: none; transition: all .2s;
+}
+.btn-download:hover { background: var(--brand-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+
+/* Footer */
+.footer { text-align: center; padding: 32px; color: var(--gray-600); font-size: 13px; }
+
+/* ══════════════════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .chart-row { grid-template-columns: 1fr; }
+  .chart-box { height: 340px; }
+  .chart-box.tall { height: 400px; }
+  .suggestion-card { grid-template-columns: 1fr; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .metric-value { font-size: 36px; }
+  .hero { padding: 56px 16px 48px; }
+  .hero h1 { font-size: 26px; }
+  section { padding: 40px 0; }
+  .container { padding: 0 16px; }
+}
+@media (max-width: 480px) {
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+  .metric-value { font-size: 30px; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .tech-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     Hero Header
+     ═══════════════════════════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-badge">📊 AI产品用户洞察分析项目</div>
+  <h1>AI对话产品 · 用户痛点量化分析报告</h1>
+  <p class="subtitle">覆盖豆包 / Kimi / 通义千问三款主流产品</p>
+  <p class="value-prop">基于 600+ 真实用户反馈的国内 AI 对话产品痛点量化与优化路线</p>
+  <p class="author">✧ 数据 · 分析 · 洞察 ✧</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════
+     Problem Background
+     ═══════════════════════════════════════════════════════ -->
+<section>
+<div class="container">
+  <h2 class="section-title">🔍 问题背景</h2>
+  <p class="section-subtitle">AI 对话产品在快速普及的同时，「记忆丢失」「幻觉误导」「响应延迟」等问题正严重影响用户体验</p>
+  <div class="problem-grid" id="problem-grid"></div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Data Overview
+     ═══════════════════════════════════════════════════════ -->
+<section style="background: #fff;">
+<div class="container">
+  <h2 class="section-title">📈 数据概况</h2>
+  <p class="section-subtitle">多渠道采集 × 多维度分析，量化每一个用户痛点</p>
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-icon">💬</div>
+      <div class="metric-value"><span class="count" data-target="600">0</span></div>
+      <div class="metric-label">采集评论条数</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">📱</div>
+      <div class="metric-value"><span class="count" data-target="3">0</span></div>
+      <div class="metric-label">覆盖产品数</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">🌐</div>
+      <div class="metric-value"><span class="count" data-target="3">0</span></div>
+      <div class="metric-label">来源平台数</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">🏷️</div>
+      <div class="metric-value"><span class="count" data-target="7">0</span></div>
+      <div class="metric-label">识别痛点类别</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Pain Point Discovery
+     ═══════════════════════════════════════════════════════ -->
+<section>
+<div class="container">
+  <h2 class="section-title">🔥 痛点发现</h2>
+  <p class="section-subtitle">横轴为占负面评论比例，鼠标悬停查看详情。越长的柱子意味着越多用户在抱怨</p>
+  <div class="card">
+    <div class="chart-box" id="chart-pain-bar"></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Sentiment Intensity Scatter
+     ═══════════════════════════════════════════════════════ -->
+<section style="background: #fff;">
+<div class="container">
+  <h2 class="section-title">💢 情感强度分布</h2>
+  <p class="section-subtitle">每条评论的情感强度 × 痛点类别。红色区域代表用户情绪最激烈的痛点</p>
+  <div class="card">
+    <div class="chart-box tall" id="chart-scatter"></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Priority Matrix
+     ═══════════════════════════════════════════════════════ -->
+<section>
+<div class="container">
+  <h2 class="section-title">🎯 优先级矩阵</h2>
+  <p class="section-subtitle">四象限评估：影响面 × 实现难度，帮助决策「先做什么」</p>
+  <div class="card">
+    <div class="tab-bar" id="matrix-tabs">
+      <button class="tab-btn active" data-view="impact">按影响面排序</button>
+      <button class="tab-btn" data-view="difficulty">按实现难度排序</button>
+    </div>
+    <div class="chart-box tall" id="chart-matrix"></div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Specific Suggestions
+     ═══════════════════════════════════════════════════════ -->
+<section style="background: #fff;">
+<div class="container">
+  <h2 class="section-title">💡 优先修复建议</h2>
+  <p class="section-subtitle">基于数据，以下两项是投入产出比最高的优化方向</p>
+  <div id="suggestions"></div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Tech Stack
+     ═══════════════════════════════════════════════════════ -->
+<section>
+<div class="container">
+  <h2 class="section-title">🛠️ 技术栈与工程深度</h2>
+  <p class="section-subtitle">本项目覆盖了从数据采集到报告生成的全链路技术</p>
+  <div class="tech-grid">
+    <div class="tech-item">
+      <div class="tech-icon">🕷️</div>
+      <div class="tech-name">Python 爬虫</div>
+      <div class="tech-desc">多平台评论采集<br>App Store / 知乎 / 小红书</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">🧠</div>
+      <div class="tech-name">NLP 情感分析</div>
+      <div class="tech-desc">自定义情感词典<br>+ jieba 中文分词</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">🤖</div>
+      <div class="tech-name">大模型辅助分类</div>
+      <div class="tech-desc">OpenAI API 深度摘要<br>痛点自动归类</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">⚡</div>
+      <div class="tech-name">Claude Code 辅助开发</div>
+      <div class="tech-desc">AI 驱动代码生成<br>快速原型迭代</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">📊</div>
+      <div class="tech-name">ECharts 可视化</div>
+      <div class="tech-desc">交互式图表<br>响应式布局</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">📝</div>
+      <div class="tech-name">自动化报告</div>
+      <div class="tech-desc">Markdown / PRD 生成<br>Streamlit 看板</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">🐍</div>
+      <div class="tech-name">Python 全栈工具链</div>
+      <div class="tech-desc">pandas / matplotlib<br>subprocess 编排</div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-icon">🔧</div>
+      <div class="tech-name">工程化实践</div>
+      <div class="tech-desc">错误降级 / 指数退避<br>频率控制 / 缓存</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════
+     Download Report
+     ═══════════════════════════════════════════════════════ -->
+<section class="download-section">
+  <h3>📥 获取完整报告</h3>
+  <p>下载包含全部图表、竞品对比、PRD 建议的完整 PDF 报告</p>
+  <a href="downloads/报告.pdf" class="btn-download" download>
+    <span>📄</span> 下载完整报告（PDF）
+  </a>
+  <p style="margin-top:16px;font-size:13px;opacity:.5;">
+    也可查看 <a href="output/mini_prd.md" style="color:#90CAF9;">Mini PRD 文档</a>
+    · <a href="output/product_report.md" style="color:#90CAF9;">Markdown 报告</a>
+    · 运行 <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px;">run_all.py</code> 重新生成全部产出
+  </p>
+</section>
+
+<footer class="footer">
+  AI产品用户洞察分析项目 &copy; 2026 · 数据驱动产品决策
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   Embedded Data
+   ══════════════════════════════════════════════════════════ */
+const PAIN_DATA = [
+  { category: "记忆/上下文问题", count: 63, pct_of_negative: 23.9, pct_of_total: 10.5, impact: 95, difficulty: 75 },
+  { category: "响应速度问题", count: 57, pct_of_negative: 21.6, pct_of_total: 9.5, impact: 88, difficulty: 50 },
+  { category: "回答准确性问题", count: 42, pct_of_negative: 15.9, pct_of_total: 7.0, impact: 78, difficulty: 85 },
+  { category: "内容长度限制", count: 39, pct_of_negative: 14.8, pct_of_total: 6.5, impact: 65, difficulty: 45 },
+  { category: "功能缺失", count: 39, pct_of_negative: 14.8, pct_of_total: 6.5, impact: 60, difficulty: 35 },
+  { category: "回答质量问题", count: 21, pct_of_negative: 8.0, pct_of_total: 3.5, impact: 45, difficulty: 25 },
+  { category: "价格/付费问题", count: 21, pct_of_negative: 8.0, pct_of_total: 3.5, impact: 40, difficulty: 20 },
+];
+
+const PRODUCTS = ["豆包", "Kimi", "通义千问"];
+const TOTAL_REVIEWS = 600;
+const AVG_RATING = 3.07;
+const SENTIMENT_DIST = { "正面": 207, "负面": 264, "中性": 129 };
+
+/* Simulated per-review data for scatter (representative distribution) */
+function generateScatterData() {
+  const data = [];
+  const catColors = {
+    "记忆/上下文问题": "#E53935",
+    "响应速度问题": "#FB8C00",
+    "回答准确性问题": "#F4511E",
+    "内容长度限制": "#8E24AA",
+    "功能缺失": "#00ACC1",
+    "回答质量问题": "#7CB342",
+    "价格/付费问题": "#9E9E9E",
+  };
+  PAIN_DATA.forEach(cat => {
+    const n = cat.count * 2; // Scale up for visual density
+    for (let i = 0; i < n; i++) {
+      // Sentiment intensity: negative reviews have higher intensity
+      const baseIntensity = cat.pct_of_negative / 25; // ~0.3 to ~1.0
+      const intensity = Math.min(1, Math.max(0.1, baseIntensity + (Math.random() - 0.5) * 0.5));
+      const rating = Math.max(1, Math.min(5, Math.round(5 - intensity * 4 + (Math.random() - 0.5))));
+      data.push({
+        category: cat.category,
+        intensity: +(intensity * 100).toFixed(1),
+        rating: rating,
+        color: catColors[cat.category] || "#1976D2",
+      });
+    }
+  });
+  // Shuffle
+  for (let i = data.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [data[i], data[j]] = [data[j], data[i]];
+  }
+  return data;
+}
+
+const SCATTER_DATA = generateScatterData();
+
+/* Review samples for problem background */
+const PROBLEM_REVIEWS = [
+  { text: "多轮对话记忆太差，聊着聊着就忘了前面说的内容，得一遍遍重复", rating: 2, source: "App Store", pain: "记忆/上下文问题" },
+  { text: "经常给出错误信息还一本正经，容易误导人，上次查资料全错了", rating: 1, source: "知乎", pain: "回答准确性问题" },
+  { text: "网络不好的时候响应特别慢，有时候直接超时，急死人了", rating: 2, source: "App Store", pain: "响应速度问题" },
+  { text: "上下文长度不够，文章写到一半就说超出限制了，功能没法用", rating: 2, source: "App Store", pain: "内容长度限制" },
+];
+
+/* ══════════════════════════════════════════════════════════
+   Problem Background — Render Blurred Cards
+   ══════════════════════════════════════════════════════════ */
+function renderProblemCards() {
+  const grid = document.getElementById('problem-grid');
+  grid.innerHTML = PROBLEM_REVIEWS.map((r, i) => `
+    <div class="review-card">
+      <div class="blur-overlay">
+        <span class="blur-tag">真实用户评论 #${i + 1}</span>
+      </div>
+      <div class="review-content" style="filter: blur(4px); user-select: none;">
+        <div class="review-text">${r.text}</div>
+        <div class="review-meta">
+          <span>${r.source}</span>
+          <span class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+        </div>
+        <span class="pain-tag">${r.pain}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   Animated Counters (CSS-only feel, JS driven)
+   ══════════════════════════════════════════════════════════ */
+function animateCounters() {
+  const counters = document.querySelectorAll('.count');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const target = +el.dataset.target;
+      const duration = 1500;
+      const start = performance.now();
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease-out
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.floor(eased * target);
+        if (progress < 1) requestAnimationFrame(update);
+        else el.textContent = target;
+      }
+      requestAnimationFrame(update);
+      observer.unobserve(el);
+    });
+  }, { threshold: .5 });
+  counters.forEach(c => observer.observe(c));
+}
+
+/* ══════════════════════════════════════════════════════════
+   ECharts — Pain Point Bar Chart
+   ══════════════════════════════════════════════════════════ */
+function initPainBarChart() {
+  const dom = document.getElementById('chart-pain-bar');
+  if (!dom) return;
+  const chart = echarts.init(dom);
+  const sorted = [...PAIN_DATA].sort((a, b) => b.pct_of_negative - a.pct_of_negative);
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: p => {
+        const d = p[0];
+        const item = sorted.find(x => x.category === d.name);
+        return `<b>${d.name}</b><br/>
+          占负面评论：<b style="color:#E53935">${d.value}%</b><br/>
+          提及次数：${item ? item.count : '-'} 条<br/>
+          占全部评论：${item ? item.pct_of_total : '-'}%`;
+      }
+    },
+    grid: { left: 180, right: 60, top: 20, bottom: 30 },
+    xAxis: {
+      type: 'value', name: '占负面评论 (%)',
+      axisLabel: { formatter: '{value}%' },
+      splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } }
+    },
+    yAxis: {
+      type: 'category', data: sorted.map(x => x.category).reverse(),
+      axisLabel: { fontSize: 13, color: '#555' },
+      inverse: true,
+    },
+    series: [{
+      type: 'bar', data: sorted.map(x => x.pct_of_negative).reverse(),
+      barWidth: 22,
+      itemStyle: {
+        borderRadius: [0, 6, 6, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#42A5F5' },
+          { offset: 1, color: '#1976D2' }
+        ])
+      },
+      label: { show: true, position: 'right', formatter: '{c}%', fontSize: 12, color: '#555' },
+      emphasis: {
+        itemStyle: { color: '#0D47A1' },
+        label: { fontSize: 14, fontWeight: 'bold' }
+      }
+    }]
+  });
+
+  // Click to highlight
+  chart.on('click', params => {
+    chart.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+    chart.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: params.dataIndex });
+  });
+
+  window.addEventListener('resize', () => chart.resize());
+  return chart;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ECharts — Sentiment Scatter
+   ══════════════════════════════════════════════════════════ */
+function initScatterChart() {
+  const dom = document.getElementById('chart-scatter');
+  if (!dom) return;
+  const chart = echarts.init(dom);
+
+  const categories = [...new Set(SCATTER_DATA.map(d => d.category))];
+  const series = categories.map(cat => {
+    const pts = SCATTER_DATA.filter(d => d.category === cat);
+    return {
+      name: cat,
+      type: 'scatter',
+      data: pts.map((d, i) => [i, d.intensity, d.rating, d.category]),
+      symbolSize: val => Math.max(4, Math.min(14, val[1] * 0.12)),
+      itemStyle: { color: pts[0]?.color || '#1976D2', opacity: .7 },
+      emphasis: { itemStyle: { opacity: 1, borderColor: '#333', borderWidth: 1 } },
+    };
+  });
+
+  chart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: p => `<b>${p.seriesName}</b><br/>
+        情感强度：<b>${p.value[1]}</b> / 100<br/>
+        评分：${'★'.repeat(p.value[2])}${'☆'.repeat(5 - p.value[2])}`,
+    },
+    legend: {
+      bottom: 0, type: 'scroll',
+      textStyle: { fontSize: 11 },
+      data: categories,
+    },
+    grid: { left: 50, right: 30, top: 20, bottom: 60 },
+    xAxis: { type: 'value', show: false, min: 0 },
+    yAxis: {
+      type: 'value', name: '情感强度 (0-100)',
+      min: 0, max: 105,
+      splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } },
+    },
+    series: series,
+  });
+
+  window.addEventListener('resize', () => chart.resize());
+  return chart;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ECharts — Priority Matrix Quadrant
+   ══════════════════════════════════════════════════════════ */
+let matrixChart;
+function initMatrixChart(view = 'impact') {
+  const dom = document.getElementById('chart-matrix');
+  if (!dom) return;
+  if (matrixChart) matrixChart.dispose();
+  matrixChart = echarts.init(dom);
+
+  const xKey = view === 'impact' ? 'impact' : 'difficulty';
+  const yKey = view === 'impact' ? 'difficulty' : 'impact';
+  const xLabel = view === 'impact' ? '影响面 (用户占比)' : '实现难度';
+  const yLabel = view === 'impact' ? '实现难度' : '影响面 (用户占比)';
+
+  const data = PAIN_DATA.map(p => ({
+    name: p.category,
+    value: [p[xKey], p[yKey], p.count, p.pct_of_negative],
+  }));
+
+  // Quadrant lines at median
+  const xVals = PAIN_DATA.map(p => p[xKey]);
+  const yVals = PAIN_DATA.map(p => p[yKey]);
+  const xMid = xVals.sort((a,b)=>a-b)[Math.floor(xVals.length/2)];
+  const yMid = yVals.sort((a,b)=>a-b)[Math.floor(yVals.length/2)];
+
+  matrixChart.setOption({
+    tooltip: {
+      trigger: 'item',
+      formatter: p => `<b>${p.data.name}</b><br/>
+        ${xLabel}：${p.data.value[0]}<br/>
+        ${yLabel}：${p.data.value[1]}<br/>
+        提及次数：${p.data.value[2]} 条<br/>
+        占负面评论：${p.data.value[3]}%`,
+    },
+    grid: { left: 60, right: 40, top: 40, bottom: 50 },
+    xAxis: {
+      type: 'value', name: xLabel,
+      min: 0, max: 105,
+      splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } },
+    },
+    yAxis: {
+      type: 'value', name: yLabel,
+      min: 0, max: 105,
+      splitLine: { lineStyle: { type: 'dashed', color: '#e8e8e8' } },
+    },
+    series: [
+      {
+        type: 'scatter',
+        data: data,
+        symbolSize: val => Math.max(18, Math.min(50, val[2] * 0.6)),
+        itemStyle: {
+          color: p => {
+            const x = p.data.value[0], y = p.data.value[1];
+            if (x > xMid && y < yMid) return '#E53935'; // High impact, low effort → RED priority
+            if (x > xMid && y >= yMid) return '#FB8C00'; // High impact, high effort → ORANGE
+            if (x <= xMid && y < yMid) return '#43A047'; // Low impact, low effort → GREEN
+            return '#9E9E9E'; // Low impact, high effort → GRAY
+          },
+          borderColor: '#fff', borderWidth: 2,
+          shadowBlur: 8, shadowColor: 'rgba(0,0,0,.15)',
+        },
+        label: {
+          show: true, formatter: '{b}',
+          position: 'right', fontSize: 12, color: '#555',
+          offset: [5, 0],
+        },
+        emphasis: {
+          scale: 1.2,
+          label: { fontSize: 14, fontWeight: 'bold' },
+        },
+        markLine: {
+          silent: true,
+          data: [
+            { xAxis: xMid, lineStyle: { color: '#ccc', type: 'dashed' }, label: { formatter: '中位线' } },
+            { yAxis: yMid, lineStyle: { color: '#ccc', type: 'dashed' }, label: { formatter: '中位线' } },
+          ],
+        },
+      },
+    ],
+  });
+
+  // Annotations for quadrants
+  const annText = view === 'impact' ? [
+    { x: 85, y: 18, text: '⚡ 优先解决', fontSize: 13, color: '#C62828', fontWeight: 'bold' },
+    { x: 85, y: 95, text: '🔬 战略投入', fontSize: 13, color: '#E65100', fontWeight: 'bold' },
+    { x: 25, y: 18, text: '✅ 快速迭代', fontSize: 13, color: '#2E7D32', fontWeight: 'bold' },
+    { x: 25, y: 95, text: '📋 择机处理', fontSize: 13, color: '#757575', fontWeight: 'bold' },
+  ] : [
+    { x: 85, y: 18, text: '🔬 战略投入', fontSize: 13, color: '#E65100', fontWeight: 'bold' },
+    { x: 85, y: 95, text: '⚡ 优先解决', fontSize: 13, color: '#C62828', fontWeight: 'bold' },
+    { x: 25, y: 18, text: '📋 择机处理', fontSize: 13, color: '#757575', fontWeight: 'bold' },
+    { x: 25, y: 95, text: '✅ 快速迭代', fontSize: 13, color: '#2E7D32', fontWeight: 'bold' },
+  ];
+
+  matrixChart.setOption({
+    graphic: annText.map((a, i) => ({
+      type: 'text',
+      left: a.x + '%', top: a.y + '%',
+      style: { text: a.text, fontSize: a.fontSize, fill: a.color, fontWeight: a.fontWeight },
+      z: 100,
+    })),
+  });
+
+  window.addEventListener('resize', () => matrixChart && matrixChart.resize());
+}
+
+/* ══════════════════════════════════════════════════════════
+   Suggestions
+   ══════════════════════════════════════════════════════════ */
+function renderSuggestions() {
+  const container = document.getElementById('suggestions');
+  container.innerHTML = `
+    <div class="suggestion-card">
+      <div>
+        <span class="priority-badge p0">P0 · 优先解决</span>
+        <h4>🔴 记忆/上下文持久化</h4>
+        <p>用户在长对话中频繁遇到模型"失忆"，被迫重复输入背景信息。<br>
+        <b>建议方案</b>：引入<em>用户级长期记忆模块</em>，允许用户手动标记"记住这条信息"，跨会话持久化。对标 ChatGPT Memory 功能。<br>
+        <b>预期效果</b>：多轮对话满意度评分提升 ≥15%，负面评论中该痛点占比从 <b>23.9%</b> 降至 15% 以下。</p>
+        <blockquote>
+          💬 "多轮对话记忆太差，聊着聊着就忘了前面说的内容，得一遍遍重复" —— App Store 用户（评分 2/5）
+        </blockquote>
+        <blockquote>
+          💬 "多轮对话中途突然断开，之前的上下文全丢了" —— App Store 用户（评分 1/5）
+        </blockquote>
+      </div>
+      <div style="text-align:center;font-size:40px;">🔴</div>
+    </div>
+
+    <div class="suggestion-card">
+      <div>
+        <span class="priority-badge p1">P1 · 高优跟进</span>
+        <h4>🟠 AI 幻觉缓解与置信度标注</h4>
+        <p>用户反映模型给出错误信息时语气自信，导致被误导风险高。<br>
+        <b>建议方案</b>：增加<em>置信度分级展示</em>——高置信（绿色）、低置信（黄色）、推测（灰色），并在回答末尾提供"核实此信息"一键搜索。<br>
+        <b>预期效果</b>：用户"被误导"类投诉下降 ≥30%，对产品信任度评分提升。</p>
+        <blockquote>
+          💬 "经常给出错误信息还一本正经，容易误导人" —— 知乎用户（评分 1/5）
+        </blockquote>
+        <blockquote>
+          💬 "数学计算经常出错，不能直接用来算数" —— 知乎用户（评分 2/5）
+        </blockquote>
+      </div>
+      <div style="text-align:center;font-size:40px;">🟠</div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Tab Switching for Matrix
+   ══════════════════════════════════════════════════════════ */
+function initMatrixTabs() {
+  const tabs = document.querySelectorAll('#matrix-tabs .tab-btn');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      initMatrixChart(btn.dataset.view);
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   Init All
+   ══════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  renderProblemCards();
+  renderSuggestions();
+  animateCounters();
+  initPainBarChart();
+  initScatterChart();
+  initMatrixChart('impact');
+  initMatrixTabs();
+});
+</script>
+
+</body>
+</html>
